@@ -1,0 +1,29 @@
+import(methods)
+#import(gendoo.Hs.db)
+import(MeSH.db)
+import(fdrtool)
+import(Category)
+
+exportClasses(MeSHHyperGParams, MeSHHyperGResult)
+
+exportMethods("meshHyperGTest",
+              "meshIds",
+              "meshTerms",
+              "meshCategory",
+              "pvalues",
+              "show",
+              "summary", 
+              
+              ## Params
+              "initialize",
+              "geneIds",
+              "geneIds<-",
+              "universeGeneIds",
+              "universeGeneIds<-",
+              "annotation",
+              "annotation<-",
+              "pvalueCutoff",
+              "pvalueCutoff<-",
+              "pAdjust",
+              "makeValidParams")
+

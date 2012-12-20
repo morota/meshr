@@ -1,0 +1,13 @@
+Package: meshr
+Title: Tools for manipulating MeSH and microarrays.
+Version: 0.99.0
+Author: Gota Morota, Koki Tsuyuzaki, Takeru Nakazato, Itoshi Nikaido
+Description: This package conducts a MeSH enrichment analysis employing gene-MeSH 
+  annotation data. A hypergeometric test accounting for a multiple
+  tesing correction is used to find significantly enriched MeSH terms. 
+biocViews: Bioinformatics, Statistics, Annotation, MultipleComparisons
+Imports: MeSH.db, fdrtool, Category, methods
+Depends: R (>= 2.10), gendoo.Hs.db, MeSH.db, fdrtool, Category, methods
+Maintainer: Gota Morota <morota@ansci.wisc.edu>
+License: Artistic-2.0
+

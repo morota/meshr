@@ -1,0 +1,4 @@
+^.*gz
+README.md
+.gitignore
+.git/.
