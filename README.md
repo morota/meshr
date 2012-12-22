@@ -14,6 +14,7 @@ require(meshr)
 ?meshr
 ?MeSHHyperGParams-class
 ?MeSHHyperGResult-class
+?meshHyperGTest
 
 example(meshHyperGTest)
 ```

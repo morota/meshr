@@ -62,7 +62,7 @@ meshR <- meshHyperGTest(meshParams)
 summary(meshR)
 
 ## hypergeometric test using different annotation data 
-meshParams@annotation <- "GendooMeSHB" 
+annotation(meshParams) <- "GendooMeSHB" 
 meshR <- meshHyperGTest(meshParams) 
 summary(meshR)
 }
