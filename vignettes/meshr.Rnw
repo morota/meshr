@@ -1,0 +1,215 @@
+%\VignetteIndexEntry{meshr}
+%\VignetteDepends{meshr}
+%\VignetteKeywords{meshr}
+%\VignettePackage{meshr}
+
+
+\documentclass[10pt]{article}
+\usepackage{fullpage}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{threeparttable}
+%\usepackage[hmargin=0.75in,vmargin=0.75in]{geometry}
+\usepackage{authblk}
+\usepackage{fancyhdr}
+\usepackage{latexsym}
+\usepackage{verbatim}
+\usepackage{multirow} 
+\usepackage{hyperref}
+
+\begin{document}
+\title{{\bf meshr: MeSH enrichment analysis}}
+\author[1]{Gota Morota\thanks{Email: morota@ansci.wisc.edu}}
+\author[2]{Koki Tsuyuzaki}
+\author[3,4]{Ai Nikaido}
+\affil[1]{Department of Animal Sciences, University of Wisconsin-Madison}
+\affil[2]{Department of Medical and Life Science, Tokyo University of Science}
+\affil[3]{Functional Genomics Unit, RIKEN Center for Developmental Biology}
+\affil[4]{Laboratory for Systems Biology, RIKEN Center for Developmental Biology}
+\date{January 24, 2013}
+
+\maketitle
+
+\tableofcontents
+
+\section{Introduction}
+The \textbf{meshr} package is designed to conduct an enrichment analysis for Medical Subject Headings (MeSH). 
+MeSH is a collection of a comprehensive life sciences vocabulary and it contains more than 25,000 clinical and biological terms. 
+The idea behind this package is analogous to Gene Ontology enrichment analysis, where sets of genes is 
+analyzed to extract common annotated biological properties. 
+The usage of \textbf{meshr} closely follows that of the Bioconductor \textbf{GOstats} package. 
+Thus, users who are familiar with \textbf{GOstats} may easily handle \textbf{meshr}. 
+
+The \textbf{meshr} package accepts selected and background genes as input, and returns significantly overrepresented MeSH terms. 
+It is used in conjunction with \textbf{MeSH.db} package and one of the annotation packages, e.g., \textbf{gendoo.Hs.db}. 
+This vignette serves as a quick guide to the \textbf{meshr}, while illustrating entire process to perform a MeSH enrichment analysis. 
+Before we get started, several preprocessing steps are required to obtain test data. 
+The example dataset used throughout this vignette is taken from the Bioconductor package \textbf{cummeRbund}. 
+This package comes together with the RNA-Seq data and details are presented in the \textbf{cummeRbund} vignette. 
+
+%uncover a characteristic of biological functions that the set of identified genes share each other (
+
+
+\section{Data preparation}
+We begin with loading the packages required to obtain sample data.  
+
+<<>>=
+require(cummeRbund)
+require(org.Hs.eg.db)
+@
+
+The example data are located in library/cummeRbund/extdata/. 
+
+<<>>=
+## obtain the example data in the cummerRbund package
+cuff <- readCufflinks(dir=system.file("extdata", package="cummeRbund"))
+@ 
+
+This RNA-Seq data were taken from three samples, "iPS", "hESC", and  "Fibroblasts". 
+We first create two objects of gene sets, i.e., selected and background genes, 
+by comparing significantly regulated genes between iPS and hESC under the significance level of 0.05. 
+
+<<>>=
+## symbols for the background genes 
+gene.symbols <- annotation(genes(cuff))[,4]
+
+## symbols for the selected genes 
+mySigGeneIds <- getSig(cuff,x='hESC',y='iPS',alpha=0.05,level='genes')
+mySigGenes <- getGenes(cuff,mySigGeneIds)
+sig.gene.symbols <- annotation(mySigGenes)[,4]
+@ 
+
+We then map these Gene Symbol Identifiers to Entrez Gene ID through the \textbf{org.Hs.eg.db} package as follows. 
+Note that we remove genes without available symbols prior to \textbf{select} method. 
+
+<<>>=
+gene.symbols <- gene.symbols[!is.na(gene.symbols)]
+sig.gene.symbols <- sig.gene.symbols[!is.na(sig.gene.symbols)]
+## get Enrez Gene ID from gene symbols 
+geneid <- select(org.Hs.eg.db, keys=gene.symbols, keytype="SYMBOL", cols="ENTREZID")
+sig.geneid <- select(org.Hs.eg.db, keys=sig.gene.symbols, keytype="SYMBOL", cols="ENTREZID")
+@ 
+
+One may notice that some Gene Symbol Identifiers were not matched to Entrez Gene ID, because gene aliases were queried. 
+We can re-map these symbols to Entrez Gene ID by using \textbf{org.Hs.egALIAS2EG} object. 
+
+<<>>=
+## re-mapping non-matched background genes 
+na.index1 <- which(is.na(geneid[,2]))
+for (i in na.index1){
+  s <- unlist(strsplit(as.character(geneid[i,][1]), ","))[1]
+  sym <- get(s, org.Hs.egALIAS2EG)[1]
+  geneid[i,2] <- as.integer(sym)
+}
+
+## re-mapping non-matched selected genes 
+na.index2 <- which(is.na(sig.geneid[,2]))
+for (i in na.index2){
+  s <- unlist(strsplit(as.character(sig.geneid[i,][1]), ","))[1]
+  sym <- get(s, org.Hs.egALIAS2EG)[1]
+  sig.geneid[i,2] <- as.integer(sym)
+}
+@ 
+
+Lastly, we remove duplicated Entrez Gene ID. 
+
+<<>>=
+# remove duplicated genes 
+geneid <- geneid[!duplicated(geneid[,2]), ]
+sig.geneid <- sig.geneid[!duplicated(sig.geneid[,2]), ]
+@ 
+
+These preprocessing steps resulted in 303 background genes and 104 selected genes that will be subsequently 
+used for the MeSH enrichment analysis. 
+
+<<>>=
+dim(geneid)[1]
+dim(sig.geneid)[1]
+@ 
+
+\section{MeSH enrichment analysis}
+We finally proceed to uncover a characteristic of MeSH terms that the set of identified genes 
+share each other via the \textbf{meshr} package. We first load the required packages. 
+
+<<>>=
+require("fdrtool")
+require("gendoo.Hs.db")
+require("MeSH.db")
+require("meshr")
+@ 
+
+We create a parameter instance by specifying the objects of selected and background genes, the name of the annotation data, 
+$p$-value cutoff, and the choice of a multiple-testing correction method. 
+In this first example, we choose "Drugs and chemicals" category, $p$-value cutoff 0.05, and no multiple-testing adjustment. 
+For more details on description of all the arguments, readers are referred to the \textbf{MeSHHyperGParams-class} 
+help page. 
+
+<<>>=
+meshParams <- new("MeSHHyperGParams", geneIds=sig.geneid[,2], universeGeneIds=geneid[,2], 
+                  annotation="GendooMeSHD", pvalueCutoff=0.05, pAdjust="none")
+@ 
+
+The \textbf{meshHyperGTest} function carries out a hypergeometric test and returns an instance of class \textbf{MeSHHyperGResult}. 
+
+<<>>=
+meshR <- meshHyperGTest(meshParams)
+@ 
+
+Simply typing the \textbf{MeSHHyperGResult} class gives a brief description of the analysis, including 
+the choice of a MeSH category, the annotation data used, and a total number of identified overrepresented MeSH terms. 
+
+<<>>=
+meshR
+@ 
+
+Full details of the result is obtained by calling the \textbf{summary} function on the \textbf{MeSHHyperGResult} instance. 
+This presents significantly enriched MeSH ID, MeSH term, and their associated $p$-values. 
+
+<<>>=
+summary(meshR)
+@ 
+
+Switching to test another MeSH category can be easily done. 
+For example, to choose "Phenomena and Processes" category, we can do the following. 
+
+<<>>=
+annotation(meshParams) <- "GendooMeSHG"
+meshR <- meshHyperGTest(meshParams)
+summary(meshR)
+@ 
+
+
+\section{Appendix}
+<<eval=FALSE>>=
+toLatex(sessionInfo())
+@
+
+\begin{itemize}\raggedright
+  \item R version 2.15.2 (2012-10-26), \verb|x86_64-pc-linux-gnu|
+  \item Locale: \verb|C|
+  \item Base packages: base, datasets, grDevices, graphics, grid,
+    methods, stats, utils
+  \item Other packages: AnnotationDbi~1.20.3, AnnotationForge~1.0.3,
+    Biobase~2.18.0, BiocGenerics~0.4.0, Category~2.24.0, DBI~0.2-5,
+    GenomicRanges~1.10.6, Gviz~1.2.1, IRanges~1.16.4, MeSH.db~1.0,
+    RSQLite~0.11.2, cummeRbund~2.0.0, fastcluster~1.1.8,
+    fdrtool~1.2.10, fortunes~1.5-0, gendoo.Hs.db~0.99.0, ggplot2~0.9.3,
+    meshr~0.99.0, org.Hs.eg.db~2.8.0, reshape2~1.2.2,
+    rtracklayer~1.18.2
+  \item Loaded via a namespace (and not attached): BSgenome~1.26.1,
+    Biostrings~2.26.2, GSEABase~1.20.1, GenomicFeatures~1.10.1,
+    Hmisc~3.10-1, MASS~7.3-23, RBGL~1.34.0, RColorBrewer~1.0-5,
+    RCurl~1.95-3, Rsamtools~1.10.2, XML~3.95-0.1, annotate~1.36.0,
+    biomaRt~2.14.0, biovizBase~1.6.2, bitops~1.0-5, cluster~1.14.3,
+    colorspace~1.2-0, dichromat~1.2-4, digest~0.6.1, genefilter~1.40.0,
+    graph~1.36.1, gtable~0.1.2, labeling~0.1, lattice~0.20-13,
+    munsell~0.4, parallel~2.15.2, plyr~1.8, proto~0.3-10, scales~0.2.3,
+    splines~2.15.2, stats4~2.15.2, stringr~0.6.2, survival~2.37-2,
+    tools~2.15.2, xtable~1.7-0, zlibbioc~1.4.0
+\end{itemize}
+
+
+\end{document}

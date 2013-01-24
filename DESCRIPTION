@@ -8,6 +8,7 @@ Description: This package conducts a MeSH enrichment analysis employing gene-MeS
 biocViews: Bioinformatics, Statistics, Annotation, MultipleComparisons
 Imports: MeSH.db, fdrtool, Category, methods
 Depends: R (>= 2.10), gendoo.Hs.db, MeSH.db, fdrtool, Category, methods
+Suggests: cummeRbund, org.Hs.eg.db
 Maintainer: Gota Morota <morota@ansci.wisc.edu>
 License: Artistic-2.0
 

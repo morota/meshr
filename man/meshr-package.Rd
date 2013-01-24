@@ -18,7 +18,9 @@ Date: \tab 12-16-2012\cr
 biocViews: \tab Bioinformatics, Statistics, Annotation,
 MultipleComparisons\cr
 Imports: \tab MeSH.db, fdrtool, Category, methods\cr
-Depends: \tab R (>= 2.10), gendoo.Hs.db, MeSH.db, fdrtool, Category, methods\cr
+Depends: \tab R (>= 2.10), gendoo.Hs.db, MeSH.db, fdrtool, Category,
+methods\cr
+Suggests: cummeRbund, org.Hs.eg.db
 License: \tab Artistic-2.0\cr
 }
 
