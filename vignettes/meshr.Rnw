@@ -24,7 +24,7 @@
 \title{{\bf meshr: MeSH enrichment analysis}}
 \author[1]{Gota Morota\thanks{Email: morota@ansci.wisc.edu}}
 \author[2]{Koki Tsuyuzaki}
-\author[3,4]{Ai Nikaido}
+\author[3,4]{Itoshi Nikaido}
 \affil[1]{Department of Animal Sciences, University of Wisconsin-Madison}
 \affil[2]{Department of Medical and Life Science, Tokyo University of Science}
 \affil[3]{Functional Genomics Unit, RIKEN Center for Developmental Biology}
