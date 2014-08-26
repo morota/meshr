@@ -18,3 +18,6 @@ require(meshr)
 
 example(meshHyperGTest)
 ```
+
+## Update
+meshr is now available in [Bioconductor](http://www.bioconductor.org/packages/release/bioc/html/meshr.html) 2.14. 
